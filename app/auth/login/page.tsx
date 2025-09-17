@@ -37,8 +37,9 @@ export default function LoginPage() {
       // Optionally, store token: localStorage.setItem('token', data.token);
       setForm({ email: "", password: "", remember: false });
       setTimeout(() => router.push("/dashboard"), 1000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
