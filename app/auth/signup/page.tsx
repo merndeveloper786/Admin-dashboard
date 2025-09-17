@@ -31,8 +31,9 @@ export default function SignupPage() {
       if (!res.ok) throw new Error(data.message || "Signup failed");
       setSuccess("Signup successful! You can now login.");
       setForm({ email: "", username: "", password: "", terms: false });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
