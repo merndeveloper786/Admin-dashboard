@@ -2,10 +2,17 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Valid email is required" }),
+  password: z.string().min(1, { message: "Password is required" }),
+});
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
+  const [fieldErrors, setFieldErrors] = useState<{ [k: string]: string }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -14,14 +21,21 @@ export default function LoginPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
-    if (!form.email || !form.password) {
-      setError("All fields are required.");
+    setFieldErrors({});
+    const result = loginSchema.safeParse(form);
+    if (!result.success) {
+      const errors: { [k: string]: string } = {};
+      (result.error.issues as Array<{ path: (string | number)[]; message: string }>).forEach((err) => {
+        if (err.path[0]) errors[err.path[0] as string] = err.message;
+      });
+      setFieldErrors(errors);
       return;
     }
     setLoading(true);
@@ -34,7 +48,6 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Login failed");
       setSuccess("Login successful!");
-      // Optionally, store token: localStorage.setItem('token', data.token);
       setForm({ email: "", password: "", remember: false });
       setTimeout(() => router.push("/dashboard"), 1000);
     } catch (err: unknown) {
@@ -52,15 +65,17 @@ export default function LoginPage() {
         <p className="text-center text-muted mb-6">Please enter your email and password to continue</p>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-text mb-1">Email address:</label>
-            <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-border bg-background text-text focus:outline-none focus:ring-2 focus:ring-primary" placeholder="your@email.com" />
+            <label className="block text-sm font-medium text-text mb-1">Email address <span className="text-red-500">*</span></label>
+            <input name="email" type="email" value={form.email} onChange={handleChange} className={`w-full px-4 py-2 rounded-lg border ${fieldErrors.email ? 'border-red-500' : 'border-border'} bg-background text-text focus:outline-none focus:ring-2 focus:ring-primary`} placeholder="your@email.com" />
+            {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
           </div>
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-text">Password</label>
+              <label className="block text-sm font-medium text-text">Password <span className="text-red-500">*</span></label>
               <a href="#" className="text-xs text-primary hover:underline">Forget Password?</a>
             </div>
-            <input name="password" type="password" value={form.password} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-border bg-background text-text focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Password" />
+            <input name="password" type="password" value={form.password} onChange={handleChange} className={`w-full px-4 py-2 rounded-lg border ${fieldErrors.password ? 'border-red-500' : 'border-border'} bg-background text-text focus:outline-none focus:ring-2 focus:ring-primary`} placeholder="Password" />
+            {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
           </div>
           <div className="flex items-center">
             <input id="remember" name="remember" type="checkbox" checked={form.remember} onChange={handleChange} className="mr-2 accent-primary" />
